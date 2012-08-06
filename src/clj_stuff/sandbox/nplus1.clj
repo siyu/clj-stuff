@@ -33,3 +33,8 @@
    (apply group-by-keys coll kvs)
    reduce-rows*
    (assoc {} :*)))
+
+(comment
+  (reduce-rows m [:a :name])
+  (reduce-rows m [:a :name] [:c])
+  (reduce-rows m [:a :name] [:c] [:oas]))
