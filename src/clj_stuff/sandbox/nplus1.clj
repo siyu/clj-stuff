@@ -24,6 +24,8 @@
     (let [{:keys [pk ks children]} sm]
       (->>
        (group-by* (fn [m] (select-keys m ks)) coll)
+       (remove (fn [[k v]] (empty? k)) )
+       (seq)
        (reduce (fn [ret [k v]]
                  (assoc ret k (for [c children] (group-by-keys c v))))
                {})
