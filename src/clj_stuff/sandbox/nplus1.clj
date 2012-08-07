@@ -9,32 +9,39 @@
         {:a "gn" :name "ginnie" :c 2 :oas 100 :px 17}
         {:a "gn" :name "ginnie" :c 2 :oas 200 :px 18}])
 
+(defn group-by*
+  "group-by that maintains order"
+  [f coll]
+  (reduce
+    (fn [ret x]
+      (let [k (f x)]
+        (assoc ret k (conj (get ret k []) x))))
+    (array-map) coll))
 
-(defn group-by-keys [coll & kvs]
+(defn group-by-keys [sm coll]
   "A nested version of group-by."
-  (if-let [kv (first kvs)]
-    (->>
-     (group-by (fn [m] (select-keys m kv)) coll)
-     (reduce (fn [ret [k v]]
-               (assoc ret k (apply group-by-keys v (rest kvs))))
-             {}))
-      coll))
+  (if sm
+    (let [{:keys [pk ks children]} sm]
+      (->>
+       (group-by* (fn [m] (select-keys m ks)) coll)
+       (reduce (fn [ret [k v]]
+                 (assoc ret k (for [c children] (group-by-keys c v))))
+               {})
+       (assoc {} pk)))
+    coll))
 
 (defn- reduce-rows* [coll]
   (reduce (fn [c [k v]]
-            (if (map? v)
-              (conj c (merge {} k {:* (reduce-rows* v)}))
-              (conj c k)))
-          []
+            (->>
+             (for [[kk vv] v]
+               (if (map? kk)
+                 (apply merge kk (map reduce-rows* vv) )
+                 kk))
+             (assoc c k)))
+          {}
           coll))
 
-(defn reduce-rows [coll & kvs]
+(defn reduce-rows [sm coll]
   (->>
-   (apply group-by-keys coll kvs)
-   reduce-rows*
-   (assoc {} :*)))
-
-(comment
-  (reduce-rows m [:a :name])
-  (reduce-rows m [:a :name] [:c])
-  (reduce-rows m [:a :name] [:c] [:oas]))
+   (group-by-keys sm coll)
+   reduce-rows*))
